@@ -252,16 +252,19 @@ def get_pace_spin_comparative_table(
 def get_batter_overwise_boundary_intelligence(
     bbb: pd.DataFrame,
     batter_id: int,
+    batter_name: Optional[str] = None,
     match_id: Optional[int] = None,
     innings: Optional[int] = None,
     only_active_overs: bool = False
 ) -> pd.DataFrame:
     """
-    Calculates detailed over-wise runs and boundary progression for a batter.
+    Calculates detailed over-wise runs, boundaries, boundary runs, balls faced,
+    dots, dismissals, average, and strike rate progression for a batter.
     Excludes wides from balls faced, correctly credits batter runs, fours and sixes.
     Boundary runs = (4 * Fours) + (6 * Sixes).
     Total boundaries = Fours + Sixes.
     Strike rate = (Runs / Balls Faced * 100.0).
+    Average = Runs / Dismissals when dismissals > 0 else 'N/A'.
     """
     df = bbb[bbb["striker_id"] == batter_id]
     if match_id is not None:
@@ -271,6 +274,12 @@ def get_batter_overwise_boundary_intelligence(
 
     if df.empty:
         return pd.DataFrame()
+
+    b_name = batter_name
+    if not b_name and "striker_name" in df.columns and not df["striker_name"].dropna().empty:
+        b_name = str(df["striker_name"].dropna().iloc[0])
+    if not b_name:
+        b_name = f"Player {batter_id}"
 
     if only_active_overs:
         overs = sorted(df["overid"].dropna().unique())
@@ -282,21 +291,32 @@ def get_batter_overwise_boundary_intelligence(
         sub = df[df["overid"] == ov]
         runs = int(sub["batter_runs"].sum()) if not sub.empty else 0
         balls = int(sub["is_legal_ball_batter"].sum()) if not sub.empty else 0
+        matches = int(sub["match_id"].nunique()) if not sub.empty else 0
         fours = int(sub["is_four"].sum()) if not sub.empty else 0
         sixes = int(sub["is_six"].sum()) if not sub.empty else 0
+        dots = int(sub["is_dot_ball_batter"].sum()) if not sub.empty else 0
+        outs = int(((sub["dismissed_player_id"] == batter_id) & (sub["is_wicket"] == 1)).sum()) if not sub.empty else 0
+
         total_boundaries = fours + sixes
         boundary_runs = (fours * 4) + (sixes * 6)
         sr = round((runs / balls * 100.0), 2) if balls > 0 else 0.0
+        avg = f"{runs / outs:.2f}" if outs > 0 else "N/A"
+        bpb = round(balls / total_boundaries, 2) if total_boundaries > 0 else np.nan
 
         rows.append({
+            "Batter": b_name,
             "Over": int(ov),
+            "Matches": matches,
             "Runs": runs,
             "Balls Faced": balls,
+            "Strike Rate": sr,
+            "Average": avg,
             "Fours": fours,
             "Sixes": sixes,
             "Total Boundaries": total_boundaries,
             "Boundary Runs": boundary_runs,
-            "Strike Rate": sr
+            "Dot Balls": dots,
+            "Balls Per Boundary": bpb
         })
 
     return pd.DataFrame(rows)
@@ -314,6 +334,7 @@ def get_batter_over_peaks(
     - Maximum fours in an over & corresponding over number
     - Maximum sixes in an over & corresponding over number
     - Maximum total boundaries in an over & corresponding over number
+    - Highest boundary runs in an over & corresponding over number
     Provides both single-innings match peaks and aggregate career over peaks.
     """
     df = bbb[bbb["striker_id"] == batter_id]
@@ -328,10 +349,12 @@ def get_batter_over_peaks(
             "single_max_fours": 0, "single_max_fours_over": 1,
             "single_max_sixes": 0, "single_max_sixes_over": 1,
             "single_max_boundaries": 0, "single_max_boundaries_over": 1,
+            "single_max_boundary_runs": 0, "single_max_boundary_runs_over": 1,
             "agg_max_runs": 0, "agg_max_runs_over": 1,
             "agg_max_fours": 0, "agg_max_fours_over": 1,
             "agg_max_sixes": 0, "agg_max_sixes_over": 1,
             "agg_max_boundaries": 0, "agg_max_boundaries_over": 1,
+            "agg_max_boundary_runs": 0, "agg_max_boundary_runs_over": 1,
         }
 
     # Match-over groupings (individual over instances in a single innings)
@@ -342,6 +365,7 @@ def get_batter_over_peaks(
         balls=("is_legal_ball_batter", "sum")
     ).reset_index()
     by_match_over["boundaries"] = by_match_over["fours"] + by_match_over["sixes"]
+    by_match_over["boundary_runs"] = (by_match_over["fours"] * 4) + (by_match_over["sixes"] * 6)
 
     # Aggregate over groupings (summed over across all qualifying matches)
     by_agg_over = df.groupby("overid").agg(
@@ -351,6 +375,7 @@ def get_batter_over_peaks(
         balls=("is_legal_ball_batter", "sum")
     ).reset_index()
     by_agg_over["boundaries"] = by_agg_over["fours"] + by_agg_over["sixes"]
+    by_agg_over["boundary_runs"] = (by_agg_over["fours"] * 4) + (by_agg_over["sixes"] * 6)
 
     def _safe_peak(df_grp, col):
         if df_grp.empty or df_grp[col].max() == 0:
@@ -362,21 +387,25 @@ def get_batter_over_peaks(
     s_4s, s_4s_ov = _safe_peak(by_match_over, "fours")
     s_6s, s_6s_ov = _safe_peak(by_match_over, "sixes")
     s_bnd, s_bnd_ov = _safe_peak(by_match_over, "boundaries")
+    s_bnd_r, s_bnd_r_ov = _safe_peak(by_match_over, "boundary_runs")
 
     a_runs, a_runs_ov = _safe_peak(by_agg_over, "runs")
     a_4s, a_4s_ov = _safe_peak(by_agg_over, "fours")
     a_6s, a_6s_ov = _safe_peak(by_agg_over, "sixes")
     a_bnd, a_bnd_ov = _safe_peak(by_agg_over, "boundaries")
+    a_bnd_r, a_bnd_r_ov = _safe_peak(by_agg_over, "boundary_runs")
 
     return {
         "single_max_runs": s_runs, "single_max_runs_over": s_runs_ov,
         "single_max_fours": s_4s, "single_max_fours_over": s_4s_ov,
         "single_max_sixes": s_6s, "single_max_sixes_over": s_6s_ov,
         "single_max_boundaries": s_bnd, "single_max_boundaries_over": s_bnd_ov,
+        "single_max_boundary_runs": s_bnd_r, "single_max_boundary_runs_over": s_bnd_r_ov,
         "agg_max_runs": a_runs, "agg_max_runs_over": a_runs_ov,
         "agg_max_fours": a_4s, "agg_max_fours_over": a_4s_ov,
         "agg_max_sixes": a_6s, "agg_max_sixes_over": a_6s_ov,
         "agg_max_boundaries": a_bnd, "agg_max_boundaries_over": a_bnd_ov,
+        "agg_max_boundary_runs": a_bnd_r, "agg_max_boundary_runs_over": a_bnd_r_ov,
     }
 
 
@@ -409,16 +438,16 @@ def get_batter_match_innings_list(
 
 def get_multi_batter_overwise_comparison(
     bbb: pd.DataFrame,
-    batter_ids_map: Dict[str, int]
+    batter_ids_map: Dict[str, int],
+    only_active_overs: bool = False
 ) -> pd.DataFrame:
     """
-    Computes overwise performance across multiple batters for comparative visualization.
+    Computes overwise performance across multiple batters for comparative visualization and tables.
     """
     all_dfs = []
     for b_name, b_id in batter_ids_map.items():
-        sub_df = get_batter_overwise_boundary_intelligence(bbb, b_id, only_active_overs=False)
+        sub_df = get_batter_overwise_boundary_intelligence(bbb, b_id, batter_name=b_name, only_active_overs=only_active_overs)
         if not sub_df.empty:
-            sub_df["Batter"] = b_name
             all_dfs.append(sub_df)
 
     if not all_dfs:
