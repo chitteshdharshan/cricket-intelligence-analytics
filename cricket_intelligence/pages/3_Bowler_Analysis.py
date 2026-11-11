@@ -145,7 +145,7 @@ with tab_phase:
     if len(ph_df) > 0:
         c1, c2 = st.columns([1.5, 1])
         with c1:
-            st.dataframe(ph_df, use_container_width=True, height=180)
+            st.dataframe(ph_df, width="stretch", height=180)
         with c2:
             fig_p = px.bar(
                 ph_df, x="Phase", y="Economy", color="Phase",
@@ -154,28 +154,28 @@ with tab_phase:
             )
             _ph_layout = get_plotly_layout_defaults()
             fig_p.update_layout(**_ph_layout)
-            st.plotly_chart(fig_p, use_container_width=True)
+            st.plotly_chart(fig_p, width="stretch")
 
 with tab_hand:
     hand_df = get_bowler_handedness_split(bbb, bowler_id, filters)
     if len(hand_df) > 0:
         c1, c2 = st.columns([1.5, 1])
         with c1:
-            st.dataframe(hand_df, use_container_width=True, height=160)
+            st.dataframe(hand_df, width="stretch", height=160)
         with c2:
             fig_h = px.bar(
                 hand_df, x="Batsman Hand", y="Average", color="Batsman Hand",
                 title="Bowling Average vs Handedness"
             )
             fig_h.update_layout(**get_plotly_layout_defaults())
-            st.plotly_chart(fig_h, use_container_width=True)
+            st.plotly_chart(fig_h, width="stretch")
 
 with tab_dismissals:
     d_df = get_bowler_dismissal_types(bbb, bowler_id)
     if len(d_df) > 0:
         c1, c2 = st.columns([1.2, 1.8])
         with c1:
-            st.dataframe(d_df, use_container_width=True, height=220)
+            st.dataframe(d_df, width="stretch", height=220)
         with c2:
             fig_d = px.pie(
                 d_df, names="Dismissal Type", values="Wickets",
@@ -183,7 +183,7 @@ with tab_dismissals:
                 hole=0.4
             )
             fig_d.update_layout(**get_plotly_layout_defaults())
-            st.plotly_chart(fig_d, use_container_width=True)
+            st.plotly_chart(fig_d, width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -191,7 +191,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 render_section_header("Delivery Style Effectiveness")
 styles_df = get_bowler_delivery_styles(bbb, bowler_id)
 if len(styles_df) > 0:
-    st.dataframe(styles_df, use_container_width=True, height=280)
+    st.dataframe(styles_df, width="stretch", height=280)
 
 st.divider()
 
@@ -213,5 +213,5 @@ b_vs_bat = b_vs_bat.sort_values(by="balls", ascending=False).rename(columns={
     "dots": "Dots", "fours": "4s", "sixes": "6s"
 })
 
-st.dataframe(b_vs_bat, use_container_width=True, height=360)
+st.dataframe(b_vs_bat, width="stretch", height=360)
 

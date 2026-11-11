@@ -76,7 +76,7 @@ with l_col1:
     top_bat = top_bat.sort_values(by="runs", ascending=False).head(10).rename(columns={
         "striker_id": "ID", "striker_name": "Player", "runs": "Runs", "balls": "Balls", "fours": "4s", "sixes": "6s", "innings": "Inns"
     })
-    st.dataframe(top_bat, use_container_width=True, height=360)
+    st.dataframe(top_bat, width="stretch", height=360)
 
 with l_col2:
     render_section_header("Top Wicket Takers")
@@ -91,7 +91,7 @@ with l_col2:
     top_bowl = top_bowl.sort_values(by="wickets", ascending=False).head(10).rename(columns={
         "bowler_id": "ID", "bowler_name": "Bowler", "wickets": "Wkts", "runs": "Runs", "innings": "Inns"
     })
-    st.dataframe(top_bowl[["ID", "Bowler", "Wkts", "Overs", "Runs", "Econ", "Inns"]], use_container_width=True, height=360)
+    st.dataframe(top_bowl[["ID", "Bowler", "Wkts", "Overs", "Runs", "Econ", "Inns"]], width="stretch", height=360)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -102,6 +102,6 @@ st.dataframe(
         "match_id": "Match ID", "match_number": "Match #", "match_date": "Date", "home_team": "Home",
         "away_team": "Away", "venue_country": "Venue", "result": "Result"
     }),
-    use_container_width=True
+    width="stretch"
 )
 

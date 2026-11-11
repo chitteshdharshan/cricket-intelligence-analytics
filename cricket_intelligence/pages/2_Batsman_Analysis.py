@@ -204,7 +204,7 @@ if len(obo_df) > 0:
             "Dismissals": st.column_config.NumberColumn("Dismissals", format="%d"),
             "Innings": st.column_config.NumberColumn("Innings", format="%d")
         },
-        use_container_width=True,
+        width="stretch",
         height=320
     )
 
@@ -239,7 +239,7 @@ if len(obo_df) > 0:
             "is_wicket": "Wicket",
             "dismissal_type": "Dismissal"
         }),
-        use_container_width=True,
+        width="stretch",
         height=260
     )
 else:
@@ -253,7 +253,7 @@ phase_df = get_batsman_phase_stats(bbb, player_id, filters)
 if len(phase_df) > 0:
     p_col1, p_col2 = st.columns([1.5, 1])
     with p_col1:
-        st.dataframe(phase_df, use_container_width=True, height=180)
+        st.dataframe(phase_df, width="stretch", height=180)
     with p_col2:
         fig_phase = px.bar(
             phase_df, x="Phase", y="Strike Rate",
@@ -263,7 +263,7 @@ if len(phase_df) > 0:
         )
         defaults_p = get_plotly_layout_defaults()
         fig_phase.update_layout(**defaults_p)
-        st.plotly_chart(fig_phase, use_container_width=True)
+        st.plotly_chart(fig_phase, width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -284,7 +284,7 @@ if len(inn_df) > 0:
             "strike_rate": "Strike Rate",
             "status": "Dismissal / Status"
         }),
-        use_container_width=True,
+        width="stretch",
         height=320
     )
 
@@ -344,7 +344,7 @@ with sel_col1:
 
 with sel_col2:
     st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("🔄 Show All Shots", use_container_width=True, disabled=(active_shot == "All")):
+    if st.button("🔄 Show All Shots", width="stretch", disabled=(active_shot == "All")):
         st.session_state["active_shot_filter"] = "All"
         st.rerun()
 
@@ -416,7 +416,7 @@ with tab_tbl:
             selection_mode="single-row",
             on_select="rerun",
             key="shot_summary_table",
-            use_container_width=True,
+            width="stretch",
             height=320
         )
     else:
@@ -427,7 +427,7 @@ with tab_chart:
         fig_shots = create_shot_comparison_chart(shot_summary_df, top_n=12, selected_shot=active_shot)
         st.plotly_chart(
             fig_shots,
-            use_container_width=True,
+            width="stretch",
             on_select="rerun",
             selection_mode="points",
             key="shot_comparison_chart"
@@ -513,7 +513,7 @@ st.dataframe(
         "on_or_off": "Side", "is_four": "4", "is_six": "6", "is_wicket": "Out",
         "dismissal_type": "Dismissal"
     }),
-    use_container_width=True,
+    width="stretch",
     height=340
 )
 

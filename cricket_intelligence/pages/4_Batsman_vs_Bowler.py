@@ -63,7 +63,7 @@ if mode.startswith("Batsman vs All Bowlers"):
     b_matrix = get_batsman_vs_all_bowlers(bbb, chosen_pid)
     
     if len(b_matrix) > 0:
-        st.dataframe(b_matrix, use_container_width=True, height=360)
+        st.dataframe(b_matrix, width="stretch", height=360)
 
         # Drill-down into a specific bowler from this table
         render_section_header("Inspect Deliveries Faced Against Specific Bowler")
@@ -96,7 +96,7 @@ if mode.startswith("Batsman vs All Bowlers"):
                 "delivery_style": "Style", "pace_or_spin": "Type", "is_four": "4", "is_six": "6",
                 "is_wicket": "Out", "dismissal_type": "Dismissal"
             }),
-            use_container_width=True,
+            width="stretch",
             height=280
         )
     else:
@@ -154,19 +154,19 @@ else:
 
         tab_m1, tab_m2, tab_m3 = st.tabs(["Over Progression", "Delivery Style Breakdown", "Match History & Ball-by-Ball"])
         with tab_m1:
-            st.dataframe(h2h_data["over_progression"], use_container_width=True, height=220)
+            st.dataframe(h2h_data["over_progression"], width="stretch", height=220)
         with tab_m2:
-            st.dataframe(h2h_data["delivery_styles"], use_container_width=True, height=220)
+            st.dataframe(h2h_data["delivery_styles"], width="stretch", height=220)
         with tab_m3:
             render_section_header("Match-by-Match Records")
-            st.dataframe(h2h_data["match_history"], use_container_width=True, height=180)
+            st.dataframe(h2h_data["match_history"], width="stretch", height=180)
             render_section_header("Complete Ball-by-Ball History")
             st.dataframe(
                 h2h_data["deliveries"][[
                     "match_id", "innings", "overid", "over_ball_num", "batter_runs", "stroke",
                     "delivery_style", "is_four", "is_six", "is_wicket", "dismissal_type"
                 ]],
-                use_container_width=True,
+                width="stretch",
                 height=260
             )
     else:

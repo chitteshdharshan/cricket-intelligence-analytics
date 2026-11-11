@@ -38,7 +38,7 @@ with tab1:
         {"Dataset": "playing_eleven.csv", "Rows": len(data["playing_eleven"]), "Primary / Foreign Keys": "match_id, team_id, player_id", "Integrity Status": "100% Validated (19,418 Playing Records)"},
         {"Dataset": "competition_team_player_mapping.csv", "Rows": len(p_map), "Primary / Foreign Keys": "player_id, team_id, comp_id", "Integrity Status": "100% Validated (1,217 Unique Players)"}
     ]
-    st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
+    st.dataframe(pd.DataFrame(summary_data), width="stretch")
 
     render_section_header("Verification of Encoded Extras Columns")
     st.markdown("""

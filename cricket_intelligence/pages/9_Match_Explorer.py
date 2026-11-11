@@ -88,18 +88,18 @@ for idx, inn_num in enumerate(inn_keys):
         st.markdown(f"**Total Score:** `{inn_obj['total_runs']}/{inn_obj['total_wickets']}` in `{inn_obj['overs']}` overs | **Extras:** `{inn_obj['extras']}`")
 
         st.markdown("##### Batting Scorecard")
-        st.dataframe(inn_obj["bat_scorecard"], use_container_width=True)
+        st.dataframe(inn_obj["bat_scorecard"], width="stretch")
 
         st.markdown("##### Bowling Scorecard")
-        st.dataframe(inn_obj["bowl_scorecard"], use_container_width=True)
+        st.dataframe(inn_obj["bowl_scorecard"], width="stretch")
 
         col_fow, col_part = st.columns(2)
         with col_fow:
             st.markdown("##### Fall of Wickets")
-            st.dataframe(inn_obj["fow"], use_container_width=True, height=220)
+            st.dataframe(inn_obj["fow"], width="stretch", height=220)
         with col_part:
             st.markdown("##### Reconstructed Partnerships")
-            st.dataframe(inn_obj["partnerships"], use_container_width=True, height=220)
+            st.dataframe(inn_obj["partnerships"], width="stretch", height=220)
 
 with tabs[len(inn_keys)]:
     st.markdown("#### Official Playing XIs")
@@ -110,7 +110,7 @@ with tabs[len(inn_keys)]:
             match_dossier["home_xi"][["batting_order", "player_name", "player_id", "is_captain", "is_wk"]].rename(columns={
                 "batting_order": "Bat Order", "player_name": "Player", "player_id": "ID", "is_captain": "Captain", "is_wk": "WK"
             }),
-            use_container_width=True
+            width="stretch"
         )
     with xi_c2:
         st.markdown(f"##### {meta['away_team']}")
@@ -118,7 +118,7 @@ with tabs[len(inn_keys)]:
             match_dossier["away_xi"][["batting_order", "player_name", "player_id", "is_captain", "is_wk"]].rename(columns={
                 "batting_order": "Bat Order", "player_name": "Player", "player_id": "ID", "is_captain": "Captain", "is_wk": "WK"
             }),
-            use_container_width=True
+            width="stretch"
         )
 
 with tabs[len(inn_keys) + 1]:
@@ -137,7 +137,7 @@ with tabs[len(inn_keys) + 1]:
             markers=True
         )
         fig_worm.update_layout(**get_plotly_layout_defaults())
-        st.plotly_chart(fig_worm, use_container_width=True)
+        st.plotly_chart(fig_worm, width="stretch")
 
 with tabs[len(inn_keys) + 2]:
     st.markdown("#### Complete Delivery-by-Delivery Log")
@@ -151,7 +151,7 @@ with tabs[len(inn_keys) + 2]:
             "delivery_style": "Style", "pace_or_spin": "Type", "is_four": "4", "is_six": "6",
             "is_wicket": "Wkt", "dismissal_type": "Dismissal"
         }),
-        use_container_width=True,
+        width="stretch",
         height=400
     )
 

@@ -220,7 +220,7 @@ with tab_leaders:
             title="Top 10 Batsmen by Aggregate Runs",
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_batsmen, use_container_width=True)
+        st.plotly_chart(fig_batsmen, width="stretch")
 
     with lead_c2:
         st.markdown("##### Leading Wicket Takers")
@@ -239,7 +239,7 @@ with tab_leaders:
             title="Top 10 Bowlers by Wickets Taken",
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_bowlers, use_container_width=True)
+        st.plotly_chart(fig_bowlers, width="stretch")
 
 with tab_phase:
     phase_stats = df_filtered.groupby("phase").agg(
@@ -284,7 +284,7 @@ with tab_phase:
             yaxis=dict(title="Runs Scored", gridcolor="#263449"),
             yaxis2=dict(title="Strike Rate", overlaying="y", side="right", showgrid=False)
         )
-        st.plotly_chart(fig_phase, use_container_width=True)
+        st.plotly_chart(fig_phase, width="stretch")
 
     with ph_col2:
         st.markdown("##### Phase Breakdown Metrics")
@@ -307,7 +307,7 @@ with tab_phase:
                 "6s": st.column_config.NumberColumn("6s", format="%d"),
                 "Wickets": st.column_config.NumberColumn("Wickets", format="%d")
             },
-            use_container_width=True,
+            width="stretch",
             height=240
         )
 
@@ -332,7 +332,7 @@ with tab_teams:
             title="Most Successful Teams by Total Wins",
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_teams, use_container_width=True)
+        st.plotly_chart(fig_teams, width="stretch")
 
     with t_col2:
         st.markdown("##### Team Win Standings")
@@ -342,7 +342,7 @@ with tab_teams:
                 "Team": st.column_config.TextColumn("Team"),
                 "Total Wins": st.column_config.NumberColumn("Wins", format="%d")
             },
-            use_container_width=True,
+            width="stretch",
             height=320
         )
 
@@ -371,7 +371,7 @@ with tab_matches:
             "Stage": st.column_config.TextColumn("Stage"),
             "Result": st.column_config.TextColumn("Result", width="large")
         },
-        use_container_width=True,
+        width="stretch",
         height=320
     )
 
@@ -423,7 +423,7 @@ st.dataframe(
         "Wickets": st.column_config.NumberColumn("Wickets", format="%d"),
         "Econ": st.column_config.NumberColumn("Econ", format="%.2f")
     },
-    use_container_width=True,
+    width="stretch",
     height=320
 )
 
@@ -445,11 +445,11 @@ with launch_col1:
     )
 
 with launch_col2:
-    if st.button("Open Batsman Profile", use_container_width=True):
+    if st.button("Open Batsman Profile", width="stretch"):
         st.session_state["selected_player_id"] = selected_player_id
         st.switch_page("pages/2_Batsman_Analysis.py")
 
 with launch_col3:
-    if st.button("Open Bowler Profile", use_container_width=True):
+    if st.button("Open Bowler Profile", width="stretch"):
         st.session_state["selected_bowler_id"] = selected_player_id
         st.switch_page("pages/3_Bowler_Analysis.py")

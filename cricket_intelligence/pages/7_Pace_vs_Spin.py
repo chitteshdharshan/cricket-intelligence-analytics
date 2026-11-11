@@ -87,7 +87,7 @@ if len(sum_df) > 0:
     
     t_col1, t_col2 = st.columns([1.2, 1.8])
     with t_col1:
-        st.dataframe(c_table_df, use_container_width=True, height=480)
+        st.dataframe(c_table_df, width="stretch", height=480)
     with t_col2:
         # Visual Comparison Charts
         fig_sr = px.bar(
@@ -97,7 +97,7 @@ if len(sum_df) > 0:
             color_discrete_map={"Pace": "#3B82F6", "Spin": "#16C784"}
         )
         fig_sr.update_layout(**get_plotly_layout_defaults())
-        st.plotly_chart(fig_sr, use_container_width=True)
+        st.plotly_chart(fig_sr, width="stretch")
 
         fig_dot = px.bar(
             sum_df, x="Bowling Type", y="Dot %",
@@ -106,13 +106,13 @@ if len(sum_df) > 0:
             color_discrete_map={"Pace": "#3B82F6", "Spin": "#16C784"}
         )
         fig_dot.update_layout(**get_plotly_layout_defaults())
-        st.plotly_chart(fig_dot, use_container_width=True)
+        st.plotly_chart(fig_dot, width="stretch")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Granular Bowling Types
     render_section_header("Granular Performance Against Specific Bowling Styles")
-    st.dataframe(style_df, use_container_width=True, height=320)
+    st.dataframe(style_df, width="stretch", height=320)
 else:
     st.info("No recorded deliveries for this batsman.")
 

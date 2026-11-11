@@ -88,7 +88,7 @@ with ground_col:
         handedness=batting_hand,
         render_simulated_vectors=render_vectors
     )
-    st.plotly_chart(fig_ground, use_container_width=True)
+    st.plotly_chart(fig_ground, width="stretch")
 
 with table_col:
     render_section_header("The 17 Cricket Fielding Zones")
@@ -101,13 +101,13 @@ with table_col:
             "max_deg": "End Angle (°)",
             "dist": "Depth"
         }),
-        use_container_width=True,
+        width="stretch",
         height=240
     )
 
     render_section_header("Verified Positional Scoring Split")
     side_split = get_on_off_side_analysis(bbb, chosen_pid)
-    st.dataframe(side_split, use_container_width=True, height=130)
+    st.dataframe(side_split, width="stretch", height=130)
 
 st.divider()
 
@@ -116,7 +116,7 @@ render_section_header("Fielding Zone Scoring Analytics")
 st.markdown("Metrics for each of the 17 fielding zones based on mapped shot directions:")
 
 zone_stats_df = calculate_zone_statistics(shots_to_render, batting_hand)
-st.dataframe(zone_stats_df, use_container_width=True, height=280)
+st.dataframe(zone_stats_df, width="stretch", height=280)
 
 # Drilldown into a specific fielding zone
 render_section_header("Inspect Deliveries for Selected Fielding Zone")
@@ -125,7 +125,7 @@ sel_drill_zone = st.selectbox("Select Fielding Zone to inspect deliveries:", ava
 
 zone_deliveries = get_zone_delivery_drilldown(shots_to_render, sel_drill_zone, batting_hand)
 if len(zone_deliveries) > 0:
-    st.dataframe(zone_deliveries, use_container_width=True, height=260)
+    st.dataframe(zone_deliveries, width="stretch", height=260)
 else:
     st.info(f"No deliveries recorded in the {sel_drill_zone} zone for this batsman.")
 
@@ -142,6 +142,6 @@ st.dataframe(
         "bowler_name": "Bowler", "batter_runs": "Runs", "stroke": "Shot Played",
         "delivery_style": "Delivery Style", "on_or_off": "Side", "is_four": "4", "is_six": "6", "is_wicket": "Wicket"
     }),
-    use_container_width=True,
+    width="stretch",
     height=280
 )

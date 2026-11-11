@@ -69,9 +69,9 @@ if kpis:
     
     t_bat, t_bowl = st.tabs(["🏏 Leading Batsmen for Team", "🎯 Leading Bowlers for Team"])
     with t_bat:
-        st.dataframe(contribs["batsmen"], use_container_width=True, height=340)
+        st.dataframe(contribs["batsmen"], width="stretch", height=340)
     with t_bowl:
-        st.dataframe(contribs["bowlers"], use_container_width=True, height=340)
+        st.dataframe(contribs["bowlers"], width="stretch", height=340)
 else:
     st.info("No match records found for this team.")
 

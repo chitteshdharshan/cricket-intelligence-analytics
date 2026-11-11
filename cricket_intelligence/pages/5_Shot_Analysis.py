@@ -55,7 +55,7 @@ with tab_shot:
     if len(stroke_df) > 0:
         c1, c2 = st.columns([1.6, 1.4])
         with c1:
-            st.dataframe(stroke_df, use_container_width=True, height=360)
+            st.dataframe(stroke_df, width="stretch", height=360)
         with c2:
             fig_stroke = px.bar(
                 stroke_df.head(10),
@@ -68,7 +68,7 @@ with tab_shot:
             fig_stroke.update_layout(
                 **{**get_plotly_layout_defaults(), "yaxis": dict(autorange="reversed")}
             )
-            st.plotly_chart(fig_stroke, use_container_width=True)
+            st.plotly_chart(fig_stroke, width="stretch")
     else:
         st.info("No recorded strokes available for this player.")
 
@@ -82,7 +82,7 @@ with tab_del:
     if len(del_df) > 0:
         c1, c2 = st.columns([1.6, 1.4])
         with c1:
-            st.dataframe(del_df, use_container_width=True, height=360)
+            st.dataframe(del_df, width="stretch", height=360)
         with c2:
             fig_del = px.scatter(
                 del_df[del_df["Balls Faced"] >= 15],
@@ -93,7 +93,7 @@ with tab_del:
                 color_continuous_scale="Plasma"
             )
             fig_del.update_layout(**get_plotly_layout_defaults())
-            st.plotly_chart(fig_del, use_container_width=True)
+            st.plotly_chart(fig_del, width="stretch")
     else:
         st.info("No delivery styles recorded.")
 
@@ -103,7 +103,7 @@ with tab_side:
     if len(side_df) > 0:
         c1, c2 = st.columns([1.4, 1.6])
         with c1:
-            st.dataframe(side_df, use_container_width=True, height=180)
+            st.dataframe(side_df, width="stretch", height=180)
         with c2:
             fig_pie = px.pie(
                 side_df, names="Field Side", values="Runs Scored",
@@ -113,5 +113,5 @@ with tab_side:
                 color_discrete_map={"Off-side": "#38BDF8", "On-side": "#F59E0B", "Unknown": "#64748B"}
             )
             fig_pie.update_layout(**get_plotly_layout_defaults())
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, width="stretch")
 

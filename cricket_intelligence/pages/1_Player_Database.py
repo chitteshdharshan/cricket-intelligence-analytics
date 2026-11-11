@@ -115,7 +115,7 @@ st.dataframe(
         "Balls Bowled": st.column_config.NumberColumn("Balls Bowled", format="%d"),
         "Economy": st.column_config.NumberColumn("Economy", format="%.2f")
     },
-    use_container_width=True,
+    width="stretch",
     height=420
 )
 
@@ -139,11 +139,11 @@ if len(player_map) > 0:
         )
     with col_btn1:
         st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        if st.button("Open Batsman Profile", use_container_width=True):
+        if st.button("Open Batsman Profile", width="stretch"):
             st.session_state["selected_player_id"] = target_pid
             st.switch_page("pages/2_Batsman_Analysis.py")
     with col_btn2:
         st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        if st.button("Open Bowler Profile", use_container_width=True):
+        if st.button("Open Bowler Profile", width="stretch"):
             st.session_state["selected_bowler_id"] = target_pid
             st.switch_page("pages/3_Bowler_Analysis.py")

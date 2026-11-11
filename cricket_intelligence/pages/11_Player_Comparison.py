@@ -94,7 +94,7 @@ if comp_mode.startswith("🏏"):
     comp_df = pd.DataFrame(comparison_metrics)
 
     render_section_header("Head-to-Head Batsman Matrix")
-    st.dataframe(comp_df, use_container_width=True)
+    st.dataframe(comp_df, width="stretch")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -125,7 +125,7 @@ if comp_mode.startswith("🏏"):
         showlegend=True,
         height=540
     )
-    st.plotly_chart(fig_radar, use_container_width=True)
+    st.plotly_chart(fig_radar, width="stretch")
 
 else:
     # Bowlers Comparison
@@ -181,7 +181,7 @@ else:
 
     b_df = pd.DataFrame(b_comp_metrics)
     render_section_header("Head-to-Head Bowler Matrix")
-    st.dataframe(b_df, use_container_width=True)
+    st.dataframe(b_df, width="stretch")
 
     st.markdown("<br>", unsafe_allow_html=True)
     render_section_header("Multi-Dimensional Bowling Radar Comparison")
@@ -211,4 +211,4 @@ else:
         showlegend=True,
         height=540
     )
-    st.plotly_chart(fig_b_radar, use_container_width=True)
+    st.plotly_chart(fig_b_radar, width="stretch")
