@@ -50,7 +50,14 @@ try:
         get_batter_match_innings_list,
         get_multi_batter_overwise_comparison
     )
-    from src.advanced_bowling_engine import calculate_advanced_bowling_stats
+    from src.advanced_bowling_engine import (
+        calculate_advanced_bowling_stats,
+        get_bowler_overwise_runs_economy,
+        get_bowler_overwise_matchwise,
+        get_bowler_over_peaks,
+        get_bowler_match_innings_list,
+        get_multi_bowler_overwise_comparison
+    )
     from src.overwise_analysis_engine import (
         get_batter_overwise_analysis,
         get_bowler_overwise_analysis,
@@ -87,7 +94,14 @@ except (ImportError, ModuleNotFoundError):
         get_batter_match_innings_list,
         get_multi_batter_overwise_comparison
     )
-    from cricket_intelligence.src.advanced_bowling_engine import calculate_advanced_bowling_stats
+    from cricket_intelligence.src.advanced_bowling_engine import (
+        calculate_advanced_bowling_stats,
+        get_bowler_overwise_runs_economy,
+        get_bowler_overwise_matchwise,
+        get_bowler_over_peaks,
+        get_bowler_match_innings_list,
+        get_multi_bowler_overwise_comparison
+    )
     from cricket_intelligence.src.overwise_analysis_engine import (
         get_batter_overwise_analysis,
         get_bowler_overwise_analysis,
@@ -880,6 +894,453 @@ with tabs[1]:
             file_name="wicket_iq_advanced_bowling_analysis.csv",
             mime="text/csv"
         )
+
+        # =====================================================================
+        # OVER-WISE BOWLING PERFORMANCE & RUN CONTAINMENT ANALYSIS
+        # =====================================================================
+        st.markdown("---")
+        render_section_header("🎯 OVER-WISE BOWLING PERFORMANCE & RUN CONTAINMENT", badge="Run Containment Engine")
+        st.caption(
+            "Granular over-by-over (Overs 1–20) breakdown of runs conceded, legal balls, wickets, economy, "
+            "dot balls, fours and sixes conceded, dynamically integrated with the qualifying bowlers above."
+        )
+
+        qualifying_bowlers = sorted(df_adv_bowl["bowler_name"].dropna().unique())
+
+        bw_ctrl1, bw_ctrl2, bw_ctrl3 = st.columns([1.2, 1.2, 1.6])
+        with bw_ctrl1:
+            bw_analysis_mode = st.radio(
+                "Analysis Mode:",
+                ["Overall Analysis (Aggregate across matches)", "Match-wise Analysis (Specific fixture)"],
+                index=0,
+                key="bw_ow_analysis_mode"
+            )
+        with bw_ctrl2:
+            default_bw_idx = 0
+            preferred_bw = ["Jasprit Bumrah", "Rashid Khan", "Yuzvendra Chahal", "Trent Boult", "Pat Cummins"]
+            for pn in preferred_bw:
+                if pn in qualifying_bowlers:
+                    default_bw_idx = list(qualifying_bowlers).index(pn)
+                    break
+            sel_ow_bowler = st.selectbox(
+                "🎯 Select Primary Bowler:",
+                qualifying_bowlers,
+                index=default_bw_idx,
+                key="sel_ow_bowler_dropdown"
+            )
+        with bw_ctrl3:
+            st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+            bw_filter_active = st.checkbox("Show active overs only (Legal Balls > 0)", value=False, key="chk_bw_active")
+
+        bowler_row = df_adv_bowl[df_adv_bowl["bowler_name"] == sel_ow_bowler].iloc[0]
+        bowler_id_ow = int(bowler_row["bowler_id"])
+
+        # ---- Match-wise Mode ----
+        if "Match-wise" in bw_analysis_mode:
+            bw_match_inn_list = get_bowler_match_innings_list(filtered_bbb, bowler_id_ow)
+            if bw_match_inn_list.empty:
+                st.info("No match records found for this bowler under active filters.")
+            else:
+                bw_match_opts = {}
+                for _, mr in bw_match_inn_list.iterrows():
+                    lbl = f"{mr['home_team']} vs {mr['away_team']} — Innings {int(mr['innings'])} ({str(mr['match_date'])[:10]}) [{mr['comp_name']}]"
+                    bw_match_opts[lbl] = (int(mr["match_id"]), int(mr["innings"]))
+
+                bw_sel_match_lbl = st.selectbox("Select Match & Innings:", list(bw_match_opts.keys()), key="bw_match_sel")
+                bw_sel_mid, bw_sel_inn = bw_match_opts[bw_sel_match_lbl]
+
+                bw_m_row = filtered_bbb[filtered_bbb["match_id"] == bw_sel_mid]
+                if not bw_m_row.empty:
+                    bw_mr = bw_m_row.iloc[0]
+                    st.markdown(
+                        f"""
+                    <div style="background-color: #151F30; border: 1px solid #263449; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;">
+                        <span style="color: #94A3B8; font-size: 0.8rem; text-transform: uppercase;">Match Context:</span>
+                        <strong style="color: #F5F7FA; margin-left: 6px;">{bw_mr['home_team']} vs {bw_mr['away_team']}</strong>
+                        <span style="color: #16C784; margin-left: 10px;">Innings {bw_sel_inn}</span>
+                        <span style="color: #94A3B8; margin-left: 10px;">Date: {str(bw_mr['match_date'])[:10]}</span>
+                    </div>""",
+                        unsafe_allow_html=True
+                    )
+
+                df_bw_mw = get_bowler_overwise_matchwise(filtered_bbb, bowler_id_ow, bw_sel_mid, bw_sel_inn)
+                if df_bw_mw.empty:
+                    st.info("No deliveries recorded for this bowler in the selected match/innings.")
+                else:
+                    st.markdown("#### 📋 Match-wise Over-by-Over Bowling Record")
+                    st.dataframe(
+                        df_bw_mw,
+                        width="stretch",
+                        hide_index=True,
+                        column_config={
+                            "Bowler": st.column_config.TextColumn("Bowler"),
+                            "Match ID": st.column_config.NumberColumn("Match ID", format="%d"),
+                            "Innings": st.column_config.NumberColumn("Innings", format="%d"),
+                            "Over": st.column_config.NumberColumn("Over", format="%d"),
+                            "Runs Conceded": st.column_config.NumberColumn("Runs Conceded", format="%d"),
+                            "Legal Balls": st.column_config.NumberColumn("Legal Balls", format="%d"),
+                            "Wickets": st.column_config.NumberColumn("Wickets", format="%d"),
+                            "Economy": st.column_config.TextColumn("Economy"),
+                            "Dot Balls": st.column_config.NumberColumn("Dot Balls", format="%d"),
+                            "Fours Conceded": st.column_config.NumberColumn("Fours Conceded", format="%d"),
+                            "Sixes Conceded": st.column_config.NumberColumn("Sixes Conceded", format="%d"),
+                        }
+                    )
+                    # Economy bar chart for match-wise
+                    df_bw_mw_chart = df_bw_mw.dropna(subset=["Economy"]).copy()
+                    if not df_bw_mw_chart.empty:
+                        df_bw_mw_chart["Economy_num"] = df_bw_mw_chart["Economy"].astype(float)
+                        fig_mw_econ = px.bar(
+                            df_bw_mw_chart,
+                            x="Over", y="Economy_num",
+                            labels={"Economy_num": "Economy", "Over": "Over Number"},
+                            title=f"{sel_ow_bowler} – Over-wise Economy (Match-wise)",
+                            color_discrete_sequence=["#EF4444"]
+                        )
+                        layout_defs = get_plotly_layout_defaults()
+                        fig_mw_econ.update_layout(**layout_defs)
+                        fig_mw_econ.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_mw_econ, width="stretch")
+
+        # ---- Overall Aggregate Mode ----
+        else:
+            df_bw_ow = get_bowler_overwise_runs_economy(
+                filtered_bbb, bowler_id_ow, bowler_name=sel_ow_bowler,
+                only_active_overs=bw_filter_active
+            )
+
+            if df_bw_ow.empty:
+                st.info("No delivery records for this bowler under active filters.")
+            else:
+                # --- KPI Cards ---
+                peaks_bw = get_bowler_over_peaks(filtered_bbb, bowler_id_ow)
+                st.markdown("#### 📊 Bowling Performance Highlights (Aggregate)")
+
+                kpi_row1 = st.columns(4)
+                with kpi_row1[0]:
+                    render_kpi(
+                        "Highest Runs in One Over",
+                        f"{peaks_bw['agg_max_runs']} (Over {peaks_bw['agg_max_runs_over']})",
+                        "Aggregate over career",
+                        tone="danger"
+                    )
+                with kpi_row1[1]:
+                    render_kpi(
+                        "Lowest Runs in One Over",
+                        f"{peaks_bw['agg_min_runs']} (Over {peaks_bw['agg_min_runs_over']})",
+                        "Best containment over",
+                        tone="success"
+                    )
+                with kpi_row1[2]:
+                    best_e = peaks_bw["agg_best_economy"]
+                    best_e_ov = peaks_bw["agg_best_economy_over"]
+                    render_kpi(
+                        "Best Economy Over",
+                        f"{best_e:.2f} (Over {best_e_ov})" if best_e is not None else "N/A",
+                        "Lowest runs/over rate",
+                        tone="success"
+                    )
+                with kpi_row1[3]:
+                    worst_e = peaks_bw["agg_worst_economy"]
+                    worst_e_ov = peaks_bw["agg_worst_economy_over"]
+                    render_kpi(
+                        "Worst Economy Over",
+                        f"{worst_e:.2f} (Over {worst_e_ov})" if worst_e is not None else "N/A",
+                        "Highest runs/over rate",
+                        tone="danger"
+                    )
+
+                kpi_row2 = st.columns(4)
+                with kpi_row2[0]:
+                    render_kpi(
+                        "Highest Wickets in One Over",
+                        f"{peaks_bw['agg_max_wickets']} (Over {peaks_bw['agg_max_wickets_over']})",
+                        "Best wicket-taking over",
+                        tone="success"
+                    )
+                with kpi_row2[1]:
+                    render_kpi(
+                        "Highest Dot Balls in One Over",
+                        f"{peaks_bw['agg_max_dots']} (Over {peaks_bw['agg_max_dots_over']})",
+                        "Best dot ball over",
+                        tone="primary"
+                    )
+                with kpi_row2[2]:
+                    render_kpi(
+                        "Total Runs Conceded",
+                        f"{peaks_bw['total_runs']:,}",
+                        f"Over {peaks_bw['total_legal_balls']:,} legal balls",
+                        tone="secondary"
+                    )
+                with kpi_row2[3]:
+                    overall_e = peaks_bw["overall_economy"]
+                    render_kpi(
+                        "Overall Bowling Economy",
+                        f"{overall_e:.2f}" if overall_e is not None else "N/A",
+                        "Aggregate (runs / legal balls × 6)",
+                        tone="primary"
+                    )
+
+                # --- 5 Plotly Charts ---
+                layout_defs = get_plotly_layout_defaults()
+
+                active_df = df_bw_ow[df_bw_ow["Legal Balls"] > 0].copy()
+                active_df["Economy_num"] = pd.to_numeric(active_df["Economy"], errors="coerce")
+
+                # Chart 1: Runs Conceded by Over
+                st.markdown("#### 📉 Chart 1: Runs Conceded by Over")
+                fig_bw_c1 = px.bar(
+                    active_df, x="Over", y="Runs Conceded",
+                    labels={"Over": "Over Number", "Runs Conceded": "Runs Conceded"},
+                    title=f"{sel_ow_bowler} – Runs Conceded by Over",
+                    color="Runs Conceded",
+                    color_continuous_scale=["#16C784", "#F59E0B", "#EF4444"]
+                )
+                fig_bw_c1.update_layout(**layout_defs)
+                fig_bw_c1.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_bw_c1, width="stretch")
+
+                # Chart 2: Economy by Over
+                st.markdown("#### 📊 Chart 2: Economy Rate by Over")
+                econ_df = active_df.dropna(subset=["Economy_num"])
+                fig_bw_c2 = px.line(
+                    econ_df, x="Over", y="Economy_num",
+                    markers=True,
+                    labels={"Over": "Over Number", "Economy_num": "Economy Rate"},
+                    title=f"{sel_ow_bowler} – Economy Rate by Over"
+                )
+                fig_bw_c2.add_hline(y=6.0, line_dash="dot", line_color="#16C784", annotation_text="Economy 6.0", annotation_position="top left")
+                fig_bw_c2.add_hline(y=8.0, line_dash="dot", line_color="#F59E0B", annotation_text="Economy 8.0", annotation_position="top left")
+                fig_bw_c2.add_hline(y=10.0, line_dash="dot", line_color="#EF4444", annotation_text="Economy 10.0", annotation_position="top left")
+                fig_bw_c2.update_traces(line_color="#3B82F6", marker=dict(color="#16C784", size=7))
+                fig_bw_c2.update_layout(**layout_defs)
+                fig_bw_c2.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_bw_c2, width="stretch")
+
+                # Chart 3: Wickets by Over
+                st.markdown("#### 🎯 Chart 3: Wickets Taken by Over")
+                fig_bw_c3 = px.bar(
+                    active_df, x="Over", y="Wickets",
+                    labels={"Over": "Over Number", "Wickets": "Wickets Taken"},
+                    title=f"{sel_ow_bowler} – Wickets by Over",
+                    color_discrete_sequence=["#16C784"]
+                )
+                fig_bw_c3.update_layout(**layout_defs)
+                fig_bw_c3.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_bw_c3, width="stretch")
+
+                # Chart 4: Dot Balls by Over
+                st.markdown("#### ⚫ Chart 4: Dot Balls Bowled by Over")
+                fig_bw_c4 = px.bar(
+                    active_df, x="Over", y="Dot Balls",
+                    labels={"Over": "Over Number", "Dot Balls": "Dot Balls"},
+                    title=f"{sel_ow_bowler} – Dot Balls by Over",
+                    color_discrete_sequence=["#8B5CF6"]
+                )
+                fig_bw_c4.update_layout(**layout_defs)
+                fig_bw_c4.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_bw_c4, width="stretch")
+
+                # Chart 5: Fours vs Sixes Conceded Breakdown
+                st.markdown("#### 🏏 Chart 5: Boundary Conceded Breakdown by Over")
+                fig_bw_c5 = go.Figure()
+                fig_bw_c5.add_trace(go.Bar(
+                    x=active_df["Over"], y=active_df["Fours Conceded"],
+                    name="Fours Conceded", marker_color="#F59E0B"
+                ))
+                fig_bw_c5.add_trace(go.Bar(
+                    x=active_df["Over"], y=active_df["Sixes Conceded"],
+                    name="Sixes Conceded", marker_color="#EF4444"
+                ))
+                fig_bw_c5.update_layout(
+                    barmode="stack",
+                    title=f"{sel_ow_bowler} – Fours & Sixes Conceded by Over",
+                    xaxis_title="Over Number",
+                    yaxis_title="Boundaries Conceded",
+                    **layout_defs
+                )
+                fig_bw_c5.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_bw_c5, width="stretch")
+
+                # --- Over-wise Bowling Statistics Table ---
+                st.markdown("#### 📋 Over-wise Bowling Statistics Table")
+                table_to_show_bw = df_bw_ow[df_bw_ow["Legal Balls"] > 0] if bw_filter_active else df_bw_ow
+                st.dataframe(
+                    table_to_show_bw,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "Bowler": st.column_config.TextColumn("Bowler"),
+                        "Over": st.column_config.NumberColumn("Over", format="%d"),
+                        "Matches": st.column_config.NumberColumn("Matches", format="%d"),
+                        "Runs Conceded": st.column_config.NumberColumn("Runs Conceded", format="%d"),
+                        "Legal Balls": st.column_config.NumberColumn("Legal Balls", format="%d"),
+                        "Wickets": st.column_config.NumberColumn("Wickets", format="%d"),
+                        "Economy": st.column_config.TextColumn("Economy"),
+                        "Dot Balls": st.column_config.NumberColumn("Dot Balls", format="%d"),
+                        "Fours Conceded": st.column_config.NumberColumn("Fours Conceded", format="%d"),
+                        "Sixes Conceded": st.column_config.NumberColumn("Sixes Conceded", format="%d"),
+                    }
+                )
+
+                # Reconciled Summary
+                tot_bw_runs = int(df_bw_ow["Runs Conceded"].sum())
+                tot_bw_lb = int(df_bw_ow["Legal Balls"].sum())
+                tot_bw_wkts = int(df_bw_ow["Wickets"].sum())
+                tot_bw_dots = int(df_bw_ow["Dot Balls"].sum())
+                tot_bw_4s = int(df_bw_ow["Fours Conceded"].sum())
+                tot_bw_6s = int(df_bw_ow["Sixes Conceded"].sum())
+                agg_bw_econ = round(tot_bw_runs / tot_bw_lb * 6.0, 2) if tot_bw_lb > 0 else 0.0
+
+                st.markdown(
+                    f"""<div style="background: #151F30; border: 1px solid #16C784; border-radius: 6px; padding: 10px 16px; margin-top: 8px; font-size: 0.85rem; color: #94A3B8;">
+                    📊 <strong style="color: #16C784;">Career Summary:</strong>&nbsp;
+                    Runs Conceded <strong style="color: #F5F7FA;">{tot_bw_runs:,}</strong> |
+                    Legal Balls <strong style="color: #F5F7FA;">{tot_bw_lb:,}</strong> |
+                    Economy <strong style="color: #3B82F6;">{agg_bw_econ:.2f}</strong> |
+                    Wickets <strong style="color: #16C784;">{tot_bw_wkts:,}</strong> |
+                    Dot Balls <strong style="color: #F5F7FA;">{tot_bw_dots:,}</strong> |
+                    4s Conceded <strong style="color: #F59E0B;">{tot_bw_4s:,}</strong> |
+                    6s Conceded <strong style="color: #EF4444;">{tot_bw_6s:,}</strong>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+                # CSV Download
+                csv_bw_ow = table_to_show_bw.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "📥 Download Over-wise Bowling Report (CSV)",
+                    data=csv_bw_ow,
+                    file_name=f"{sel_ow_bowler.lower().replace(' ', '_')}_overwise_bowling.csv",
+                    mime="text/csv"
+                )
+
+        # =====================================================================
+        # MULTI-BOWLER OVER-WISE COMPARISON
+        # =====================================================================
+        st.markdown("---")
+        st.markdown("#### 👥 Multi-Bowler Over-wise Comparison")
+        st.caption("Select two or more qualifying bowlers to compare their over-wise run containment profile side by side.")
+
+        bw_multi_sel = st.multiselect(
+            "Select Bowlers to Compare:",
+            qualifying_bowlers,
+            default=qualifying_bowlers[:min(2, len(qualifying_bowlers))],
+            key="bw_multi_comparison_sel"
+        )
+        bw_multi_active_only = st.checkbox("Show active overs only in comparison", value=True, key="bw_multi_active_chk")
+
+        if len(bw_multi_sel) >= 2:
+            bw_id_map = {}
+            for bw_n in bw_multi_sel:
+                r = df_adv_bowl[df_adv_bowl["bowler_name"] == bw_n]
+                if not r.empty:
+                    bw_id_map[bw_n] = int(r.iloc[0]["bowler_id"])
+
+            df_bw_comparison = get_multi_bowler_overwise_comparison(
+                filtered_bbb, bw_id_map, only_active_overs=bw_multi_active_only
+            )
+
+            if not df_bw_comparison.empty:
+                cmp_layout = get_plotly_layout_defaults()
+
+                # Comparison Chart 1: Runs Conceded by Over
+                fig_cmp_bw1 = px.line(
+                    df_bw_comparison, x="Over", y="Runs Conceded", color="Bowler",
+                    markers=True,
+                    title="Runs Conceded by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Runs Conceded": "Runs Conceded"}
+                )
+                fig_cmp_bw1.update_layout(**cmp_layout)
+                fig_cmp_bw1.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw1, width="stretch")
+
+                # Comparison Chart 2: Economy by Over
+                df_cmp_econ = df_bw_comparison.copy()
+                df_cmp_econ["Economy_num"] = pd.to_numeric(df_cmp_econ["Economy"], errors="coerce")
+                fig_cmp_bw2 = px.line(
+                    df_cmp_econ.dropna(subset=["Economy_num"]),
+                    x="Over", y="Economy_num", color="Bowler",
+                    markers=True,
+                    title="Economy Rate by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Economy_num": "Economy Rate"}
+                )
+                fig_cmp_bw2.update_layout(**cmp_layout)
+                fig_cmp_bw2.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw2, width="stretch")
+
+                # Comparison Chart 3: Wickets by Over
+                fig_cmp_bw3 = px.line(
+                    df_bw_comparison, x="Over", y="Wickets", color="Bowler",
+                    markers=True,
+                    title="Wickets by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Wickets": "Wickets Taken"}
+                )
+                fig_cmp_bw3.update_layout(**cmp_layout)
+                fig_cmp_bw3.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw3, width="stretch")
+
+                # Comparison Chart 4: Dot Balls by Over
+                fig_cmp_bw4 = px.line(
+                    df_bw_comparison, x="Over", y="Dot Balls", color="Bowler",
+                    markers=True,
+                    title="Dot Balls by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Dot Balls": "Dot Balls"}
+                )
+                fig_cmp_bw4.update_layout(**cmp_layout)
+                fig_cmp_bw4.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw4, width="stretch")
+
+                # Comparison Chart 5: Fours Conceded by Over
+                fig_cmp_bw5 = px.line(
+                    df_bw_comparison, x="Over", y="Fours Conceded", color="Bowler",
+                    markers=True,
+                    title="Fours Conceded by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Fours Conceded": "Fours Conceded"}
+                )
+                fig_cmp_bw5.update_layout(**cmp_layout)
+                fig_cmp_bw5.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw5, width="stretch")
+
+                # Comparison Chart 6: Sixes Conceded by Over
+                fig_cmp_bw6 = px.line(
+                    df_bw_comparison, x="Over", y="Sixes Conceded", color="Bowler",
+                    markers=True,
+                    title="Sixes Conceded by Over – Multi-Bowler Comparison",
+                    labels={"Over": "Over Number", "Sixes Conceded": "Sixes Conceded"}
+                )
+                fig_cmp_bw6.update_layout(**cmp_layout)
+                fig_cmp_bw6.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_cmp_bw6, width="stretch")
+
+                # Comparison Table
+                st.markdown("##### 📋 Multi-Bowler Over-wise Comparison Table")
+                st.dataframe(
+                    df_bw_comparison,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "Bowler": st.column_config.TextColumn("Bowler"),
+                        "Over": st.column_config.NumberColumn("Over", format="%d"),
+                        "Matches": st.column_config.NumberColumn("Matches", format="%d"),
+                        "Runs Conceded": st.column_config.NumberColumn("Runs Conceded", format="%d"),
+                        "Legal Balls": st.column_config.NumberColumn("Legal Balls", format="%d"),
+                        "Wickets": st.column_config.NumberColumn("Wickets", format="%d"),
+                        "Economy": st.column_config.TextColumn("Economy"),
+                        "Dot Balls": st.column_config.NumberColumn("Dot Balls", format="%d"),
+                        "Fours Conceded": st.column_config.NumberColumn("Fours Conceded", format="%d"),
+                        "Sixes Conceded": st.column_config.NumberColumn("Sixes Conceded", format="%d"),
+                    }
+                )
+                csv_bw_cmp = df_bw_comparison.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "📥 Download Multi-Bowler Comparison (CSV)",
+                    data=csv_bw_cmp,
+                    file_name="wicket_iq_multi_bowler_overwise_comparison.csv",
+                    mime="text/csv"
+                )
+        else:
+            st.info("Please select at least 2 bowlers to enable the comparison engine.")
 
 # =========================================================================
 # TAB 3: PACE VS SPIN BATTING ANALYSIS
