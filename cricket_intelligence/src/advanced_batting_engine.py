@@ -248,3 +248,182 @@ def get_pace_spin_comparative_table(
 
     return merged.sort_values(by=["pace_runs", "spin_runs"], ascending=[False, False]).reset_index(drop=True)
 
+
+def get_batter_overwise_boundary_intelligence(
+    bbb: pd.DataFrame,
+    batter_id: int,
+    match_id: Optional[int] = None,
+    innings: Optional[int] = None,
+    only_active_overs: bool = False
+) -> pd.DataFrame:
+    """
+    Calculates detailed over-wise runs and boundary progression for a batter.
+    Excludes wides from balls faced, correctly credits batter runs, fours and sixes.
+    Boundary runs = (4 * Fours) + (6 * Sixes).
+    Total boundaries = Fours + Sixes.
+    Strike rate = (Runs / Balls Faced * 100.0).
+    """
+    df = bbb[bbb["striker_id"] == batter_id]
+    if match_id is not None:
+        df = df[df["match_id"] == match_id]
+    if innings is not None:
+        df = df[df["innings"] == innings]
+
+    if df.empty:
+        return pd.DataFrame()
+
+    if only_active_overs:
+        overs = sorted(df["overid"].dropna().unique())
+    else:
+        overs = list(range(1, 21))
+
+    rows = []
+    for ov in overs:
+        sub = df[df["overid"] == ov]
+        runs = int(sub["batter_runs"].sum()) if not sub.empty else 0
+        balls = int(sub["is_legal_ball_batter"].sum()) if not sub.empty else 0
+        fours = int(sub["is_four"].sum()) if not sub.empty else 0
+        sixes = int(sub["is_six"].sum()) if not sub.empty else 0
+        total_boundaries = fours + sixes
+        boundary_runs = (fours * 4) + (sixes * 6)
+        sr = round((runs / balls * 100.0), 2) if balls > 0 else 0.0
+
+        rows.append({
+            "Over": int(ov),
+            "Runs": runs,
+            "Balls Faced": balls,
+            "Fours": fours,
+            "Sixes": sixes,
+            "Total Boundaries": total_boundaries,
+            "Boundary Runs": boundary_runs,
+            "Strike Rate": sr
+        })
+
+    return pd.DataFrame(rows)
+
+
+def get_batter_over_peaks(
+    bbb: pd.DataFrame,
+    batter_id: int,
+    match_id: Optional[int] = None,
+    innings: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Identifies maximum performance overs for a batter:
+    - Highest runs in an over & corresponding over number
+    - Maximum fours in an over & corresponding over number
+    - Maximum sixes in an over & corresponding over number
+    - Maximum total boundaries in an over & corresponding over number
+    Provides both single-innings match peaks and aggregate career over peaks.
+    """
+    df = bbb[bbb["striker_id"] == batter_id]
+    if match_id is not None:
+        df = df[df["match_id"] == match_id]
+    if innings is not None:
+        df = df[df["innings"] == innings]
+
+    if df.empty:
+        return {
+            "single_max_runs": 0, "single_max_runs_over": 1,
+            "single_max_fours": 0, "single_max_fours_over": 1,
+            "single_max_sixes": 0, "single_max_sixes_over": 1,
+            "single_max_boundaries": 0, "single_max_boundaries_over": 1,
+            "agg_max_runs": 0, "agg_max_runs_over": 1,
+            "agg_max_fours": 0, "agg_max_fours_over": 1,
+            "agg_max_sixes": 0, "agg_max_sixes_over": 1,
+            "agg_max_boundaries": 0, "agg_max_boundaries_over": 1,
+        }
+
+    # Match-over groupings (individual over instances in a single innings)
+    by_match_over = df.groupby(["match_id", "innings", "overid"]).agg(
+        runs=("batter_runs", "sum"),
+        fours=("is_four", "sum"),
+        sixes=("is_six", "sum"),
+        balls=("is_legal_ball_batter", "sum")
+    ).reset_index()
+    by_match_over["boundaries"] = by_match_over["fours"] + by_match_over["sixes"]
+
+    # Aggregate over groupings (summed over across all qualifying matches)
+    by_agg_over = df.groupby("overid").agg(
+        runs=("batter_runs", "sum"),
+        fours=("is_four", "sum"),
+        sixes=("is_six", "sum"),
+        balls=("is_legal_ball_batter", "sum")
+    ).reset_index()
+    by_agg_over["boundaries"] = by_agg_over["fours"] + by_agg_over["sixes"]
+
+    def _safe_peak(df_grp, col):
+        if df_grp.empty or df_grp[col].max() == 0:
+            return 0, 1
+        idx = df_grp[col].idxmax()
+        return int(df_grp.loc[idx, col]), int(df_grp.loc[idx, "overid"])
+
+    s_runs, s_runs_ov = _safe_peak(by_match_over, "runs")
+    s_4s, s_4s_ov = _safe_peak(by_match_over, "fours")
+    s_6s, s_6s_ov = _safe_peak(by_match_over, "sixes")
+    s_bnd, s_bnd_ov = _safe_peak(by_match_over, "boundaries")
+
+    a_runs, a_runs_ov = _safe_peak(by_agg_over, "runs")
+    a_4s, a_4s_ov = _safe_peak(by_agg_over, "fours")
+    a_6s, a_6s_ov = _safe_peak(by_agg_over, "sixes")
+    a_bnd, a_bnd_ov = _safe_peak(by_agg_over, "boundaries")
+
+    return {
+        "single_max_runs": s_runs, "single_max_runs_over": s_runs_ov,
+        "single_max_fours": s_4s, "single_max_fours_over": s_4s_ov,
+        "single_max_sixes": s_6s, "single_max_sixes_over": s_6s_ov,
+        "single_max_boundaries": s_bnd, "single_max_boundaries_over": s_bnd_ov,
+        "agg_max_runs": a_runs, "agg_max_runs_over": a_runs_ov,
+        "agg_max_fours": a_4s, "agg_max_fours_over": a_4s_ov,
+        "agg_max_sixes": a_6s, "agg_max_sixes_over": a_6s_ov,
+        "agg_max_boundaries": a_bnd, "agg_max_boundaries_over": a_bnd_ov,
+    }
+
+
+def get_batter_match_innings_list(
+    bbb: pd.DataFrame,
+    batter_id: int
+) -> pd.DataFrame:
+    """
+    Returns the list of all matches where the batter faced deliveries,
+    sorted by date descending with readable match labels.
+    """
+    df = bbb[bbb["striker_id"] == batter_id]
+    if df.empty:
+        return pd.DataFrame()
+
+    match_list = df.groupby(["match_id", "innings", "match_date", "home_team", "away_team"]).agg(
+        runs=("batter_runs", "sum"),
+        balls=("is_legal_ball_batter", "sum"),
+        fours=("is_four", "sum"),
+        sixes=("is_six", "sum")
+    ).reset_index().sort_values("match_date", ascending=False)
+
+    def _make_label(r):
+        dt_str = str(r["match_date"])[:10]
+        return f"{dt_str} | {r['home_team']} vs {r['away_team']} (Inn {r['innings']}) — {r['runs']}r ({r['balls']}b, {r['fours']}x4, {r['sixes']}x6)"
+
+    match_list["label"] = match_list.apply(_make_label, axis=1)
+    return match_list
+
+
+def get_multi_batter_overwise_comparison(
+    bbb: pd.DataFrame,
+    batter_ids_map: Dict[str, int]
+) -> pd.DataFrame:
+    """
+    Computes overwise performance across multiple batters for comparative visualization.
+    """
+    all_dfs = []
+    for b_name, b_id in batter_ids_map.items():
+        sub_df = get_batter_overwise_boundary_intelligence(bbb, b_id, only_active_overs=False)
+        if not sub_df.empty:
+            sub_df["Batter"] = b_name
+            all_dfs.append(sub_df)
+
+    if not all_dfs:
+        return pd.DataFrame()
+
+    return pd.concat(all_dfs, ignore_index=True)
+
+

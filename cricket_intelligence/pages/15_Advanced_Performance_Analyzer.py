@@ -35,7 +35,11 @@ from src.advanced_batting_engine import (
     calculate_advanced_batting_stats,
     get_pace_vs_spin_batter_breakdown,
     get_pace_spin_comparative_table,
-    filter_bbb_deliveries
+    filter_bbb_deliveries,
+    get_batter_overwise_boundary_intelligence,
+    get_batter_over_peaks,
+    get_batter_match_innings_list,
+    get_multi_batter_overwise_comparison
 )
 from src.advanced_bowling_engine import calculate_advanced_bowling_stats
 from src.overwise_analysis_engine import (
@@ -233,6 +237,413 @@ with tabs[0]:
             file_name="wicket_iq_advanced_batting_analysis.csv",
             mime="text/csv"
         )
+
+        # =====================================================================
+        # OVER-WISE RUNS & BOUNDARY INTELLIGENCE (CONNECTED FEATURE)
+        # =====================================================================
+        st.markdown("---")
+        render_section_header("📊 OVER-WISE RUNS & BOUNDARY INTELLIGENCE", badge="Delivery Progression Engine")
+        st.caption(
+            "Deep situational breakdown of runs, boundaries, boundary runs, and strike rates across Overs 1 to 20, "
+            "dynamically connected to the qualifying batters above."
+        )
+
+        qualifying_batters = sorted(df_adv_bat["striker_name"].dropna().unique())
+        
+        # Default to a prominent qualifier if available, else first in list
+        default_idx = 0
+        preferred_names = ["Yashasvi Jaiswal", "Heinrich Klaasen", "Shivam Dube", "Phil Salt", "Shreyas Iyer"]
+        for p_name in preferred_names:
+            if p_name in qualifying_batters:
+                default_idx = qualifying_batters.index(p_name)
+                break
+
+        ctrl_col1, ctrl_col2 = st.columns([1, 1])
+        with ctrl_col1:
+            sel_ow_batter = st.selectbox(
+                "🏏 Select Batter from Filtered Results:",
+                qualifying_batters,
+                index=default_idx,
+                key="sel_ow_batter_dropdown"
+            )
+        with ctrl_col2:
+            analysis_mode = st.radio(
+                "Analysis Mode:",
+                ["Overall Analysis (Aggregate across all matches)", "Match-wise Analysis (Specific fixture)"],
+                index=0,
+                horizontal=True,
+                key="ow_analysis_mode_radio"
+            )
+
+        batter_row = df_adv_bat[df_adv_bat["striker_name"] == sel_ow_batter].iloc[0]
+        batter_id = int(batter_row["striker_id"])
+        is_match_mode = "Match-wise" in analysis_mode
+
+        selected_match_id = None
+        selected_innings = None
+
+        if is_match_mode:
+            match_list = get_batter_match_innings_list(filtered_bbb, batter_id)
+            if match_list.empty:
+                st.warning(f"No specific match innings found for {sel_ow_batter} under the active global filters.")
+            else:
+                sel_match_label = st.selectbox(
+                    "📅 Select Match Fixture & Innings:",
+                    match_list["label"].tolist(),
+                    index=0,
+                    key="sel_ow_match_fixture"
+                )
+                m_row = match_list[match_list["label"] == sel_match_label].iloc[0]
+                selected_match_id = int(m_row["match_id"])
+                selected_innings = int(m_row["innings"])
+
+                st.markdown(
+                    f"""
+                    <div style="background-color: #151F30; border: 1px solid #263449; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px;">
+                        <span style="color: #94A3B8; font-size: 0.8rem; text-transform: uppercase;">Match Context:</span>
+                        <strong style="color: #F5F7FA; margin-left: 6px;">{m_row['home_team']} vs {m_row['away_team']}</strong>
+                        <span style="color: #16C784; margin-left: 10px;">Innings {selected_innings}</span>
+                        <span style="color: #94A3B8; margin-left: 10px;">Date: {str(m_row['match_date'])[:10]}</span>
+                        <span style="color: #3B82F6; margin-left: 12px; font-weight: 600;">Final: {m_row['runs']} runs ({m_row['balls']} balls, {m_row['fours']}x4, {m_row['sixes']}x6)</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info(
+                "ℹ️ **Overall Analysis Documentation:** Performance is aggregated by match over number (Overs 1–20) "
+                "across all fixtures meeting your active filters. Over 1 represents the first over of the match innings "
+                "in which the batter took strike, showing tactical phase dynamics and boundary progression."
+            )
+
+        # Compute Over-wise Intelligence Dataset
+        df_ow_table = get_batter_overwise_boundary_intelligence(
+            filtered_bbb,
+            batter_id,
+            match_id=selected_match_id,
+            innings=selected_innings,
+            only_active_overs=False
+        )
+
+        if df_ow_table.empty:
+            st.warning("No delivery data available for this batter under current selection.")
+        else:
+            # Over-wise Maximum Performance KPIs
+            peaks = get_batter_over_peaks(
+                filtered_bbb,
+                batter_id,
+                match_id=selected_match_id,
+                innings=selected_innings
+            )
+
+            st.markdown("#### ⚡ Over-wise Maximum Performance")
+            
+            if is_match_mode:
+                sub_r = "Peak run over in match"
+                sub_4 = "Peak 4s over in match"
+                sub_6 = "Peak 6s over in match"
+                sub_b = "Peak boundary over in match"
+                r_val, r_ov = peaks["single_max_runs"], f"Over {peaks['single_max_runs_over']}"
+                f_val, f_ov = peaks["single_max_fours"], f"Over {peaks['single_max_fours_over']}"
+                s_val, s_ov = peaks["single_max_sixes"], f"Over {peaks['single_max_sixes_over']}"
+                b_val, b_ov = peaks["single_max_boundaries"], f"Over {peaks['single_max_boundaries_over']}"
+            else:
+                r_val = peaks["single_max_runs"]
+                r_ov = f"Over {peaks['single_max_runs_over']}"
+                sub_r = f"Agg peak: Over {peaks['agg_max_runs_over']} ({peaks['agg_max_runs']} R)"
+
+                f_val = peaks["single_max_fours"]
+                f_ov = f"Over {peaks['single_max_fours_over']}"
+                sub_4 = f"Agg peak: Over {peaks['agg_max_fours_over']} ({peaks['agg_max_fours']} 4s)"
+
+                s_val = peaks["single_max_sixes"]
+                s_ov = f"Over {peaks['single_max_sixes_over']}"
+                sub_6 = f"Agg peak: Over {peaks['agg_max_sixes_over']} ({peaks['agg_max_sixes']} 6s)"
+
+                b_val = peaks["single_max_boundaries"]
+                b_ov = f"Over {peaks['single_max_boundaries_over']}"
+                sub_b = f"Agg peak: Over {peaks['agg_max_boundaries_over']} ({peaks['agg_max_boundaries']} B)"
+
+            kpi_r1_1, kpi_r1_2, kpi_r1_3, kpi_r1_4 = st.columns(4)
+            with kpi_r1_1:
+                render_kpi("Highest Runs in One Over", f"{r_val}", "Most runs scored in a single over", tone="primary")
+            with kpi_r1_2:
+                render_kpi("Over Number (Highest Runs)", r_ov, sub_r, tone="secondary")
+            with kpi_r1_3:
+                render_kpi("Maximum Fours in One Over", f"{f_val}", "Most 4s struck in a single over", tone="primary")
+            with kpi_r1_4:
+                render_kpi("Over Number (Most Fours)", f_ov, sub_4, tone="secondary")
+
+            kpi_r2_1, kpi_r2_2, kpi_r2_3, kpi_r2_4 = st.columns(4)
+            with kpi_r2_1:
+                render_kpi("Maximum Sixes in One Over", f"{s_val}", "Most 6s struck in a single over", tone="primary")
+            with kpi_r2_2:
+                render_kpi("Over Number (Most Sixes)", s_ov, sub_6, tone="secondary")
+            with kpi_r2_3:
+                render_kpi("Maximum Boundaries in One Over", f"{b_val}", "Fours + Sixes combined peak", tone="primary")
+            with kpi_r2_4:
+                render_kpi("Over Number (Most Boundaries)", b_ov, sub_b, tone="secondary")
+
+            # Over-wise Runs & Boundary Table
+            st.markdown("#### 📋 Over-wise Runs & Boundary Progression Table")
+            t_col1, t_col2 = st.columns([3, 1])
+            with t_col2:
+                filter_active = st.checkbox("Show active overs only (Balls Faced > 0)", value=is_match_mode, key="chk_ow_active")
+            
+            table_to_show = df_ow_table[df_ow_table["Balls Faced"] > 0] if filter_active else df_ow_table
+
+            st.dataframe(
+                table_to_show,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Over": st.column_config.NumberColumn("Over", format="%d"),
+                    "Runs": st.column_config.NumberColumn("Runs", format="%d"),
+                    "Balls Faced": st.column_config.NumberColumn("Balls Faced", format="%d"),
+                    "Fours": st.column_config.NumberColumn("Fours", format="%d"),
+                    "Sixes": st.column_config.NumberColumn("Sixes", format="%d"),
+                    "Total Boundaries": st.column_config.NumberColumn("Total Boundaries", format="%d"),
+                    "Boundary Runs": st.column_config.NumberColumn("Boundary Runs", format="%d"),
+                    "Strike Rate": st.column_config.NumberColumn("Strike Rate", format="%.2f")
+                }
+            )
+
+            # Reconciled Summary Metrics
+            tot_runs = int(df_ow_table["Runs"].sum())
+            tot_balls = int(df_ow_table["Balls Faced"].sum())
+            tot_4s = int(df_ow_table["Fours"].sum())
+            tot_6s = int(df_ow_table["Sixes"].sum())
+            tot_bnd = int(df_ow_table["Total Boundaries"].sum())
+            tot_bnd_r = int(df_ow_table["Boundary Runs"].sum())
+            tot_sr = round(tot_runs / tot_balls * 100.0, 2) if tot_balls > 0 else 0.0
+
+            m_c1, m_c2, m_c3, m_c4, m_c5, m_c6 = st.columns(6)
+            m_c1.metric("Total Runs", f"{tot_runs}")
+            m_c2.metric("Balls Faced", f"{tot_balls}")
+            m_c3.metric("Fours / Sixes", f"{tot_4s} / {tot_6s}")
+            m_c4.metric("Total Boundaries", f"{tot_bnd}")
+            m_c5.metric("Boundary Runs", f"{tot_bnd_r}")
+            m_c6.metric("Overall SR", f"{tot_sr}")
+
+            # CSV Download for Over-wise Table
+            csv_ow = table_to_show.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                f"📥 Download {sel_ow_batter} Over-wise Data (CSV)",
+                data=csv_ow,
+                file_name=f"{sel_ow_batter.lower().replace(' ', '_')}_overwise_boundaries.csv",
+                mime="text/csv",
+                key="btn_dl_ow_csv"
+            )
+
+            # Over-wise Charts (5 specific required charts)
+            st.markdown("#### 📈 Over-wise Analytical Charts")
+            
+            # Use active overs for match-mode cleaner display, or full overs for overall
+            chart_data = df_ow_table[df_ow_table["Balls Faced"] > 0] if is_match_mode else df_ow_table
+
+            c_tab1, c_tab2, c_tab3, c_tab4, c_tab5 = st.tabs([
+                "🏏 1. Runs Scored in Each Over",
+                "💥 2. Fours vs Sixes in Each Over",
+                "🎯 3. Total Boundaries in Each Over",
+                "⚡ 4. Strike Rate in Each Over",
+                "🔥 5. Boundary Runs in Each Over"
+            ])
+
+            layout_defs = get_plotly_layout_defaults()
+
+            with c_tab1:
+                fig_c1 = px.bar(
+                    chart_data,
+                    x="Over",
+                    y="Runs",
+                    text="Runs",
+                    title=f"{sel_ow_batter} — Runs Scored in Each Over",
+                    color="Runs",
+                    color_continuous_scale=["#151F30", "#3B82F6", "#16C784"]
+                )
+                fig_c1.update_layout(**layout_defs)
+                fig_c1.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_c1, width="stretch")
+
+            with c_tab2:
+                fig_c2 = go.Figure()
+                fig_c2.add_trace(go.Bar(
+                    x=chart_data["Over"],
+                    y=chart_data["Fours"],
+                    name="Fours (4s)",
+                    marker_color="#3B82F6",
+                    text=chart_data["Fours"],
+                    textposition="auto"
+                ))
+                fig_c2.add_trace(go.Bar(
+                    x=chart_data["Over"],
+                    y=chart_data["Sixes"],
+                    name="Sixes (6s)",
+                    marker_color="#16C784",
+                    text=chart_data["Sixes"],
+                    textposition="auto"
+                ))
+                fig_c2.update_layout(
+                    barmode="group",
+                    title=f"{sel_ow_batter} — Fours vs Sixes in Each Over",
+                    xaxis_title="Over Number",
+                    yaxis_title="Count",
+                    **layout_defs
+                )
+                fig_c2.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_c2, width="stretch")
+
+            with c_tab3:
+                fig_c3 = px.bar(
+                    chart_data,
+                    x="Over",
+                    y="Total Boundaries",
+                    text="Total Boundaries",
+                    title=f"{sel_ow_batter} — Total Boundaries (4s + 6s) in Each Over",
+                    color_discrete_sequence=["#F59E0B"]
+                )
+                fig_c3.update_layout(**layout_defs)
+                fig_c3.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_c3, width="stretch")
+
+            with c_tab4:
+                sr_data = df_ow_table[df_ow_table["Balls Faced"] > 0]
+                fig_c4 = px.line(
+                    sr_data,
+                    x="Over",
+                    y="Strike Rate",
+                    markers=True,
+                    text="Strike Rate",
+                    title=f"{sel_ow_batter} — Strike Rate Evolution by Over",
+                    color_discrete_sequence=["#16C784"]
+                )
+                fig_c4.update_traces(textposition="top center")
+                fig_c4.update_layout(**layout_defs)
+                fig_c4.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_c4, width="stretch")
+
+            with c_tab5:
+                fig_c5 = px.bar(
+                    chart_data,
+                    x="Over",
+                    y="Boundary Runs",
+                    text="Boundary Runs",
+                    title=f"{sel_ow_batter} — Boundary Runs (Runs from 4s & 6s) in Each Over",
+                    color_discrete_sequence=["#8B5CF6"]
+                )
+                fig_c5.update_layout(**layout_defs)
+                fig_c5.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                st.plotly_chart(fig_c5, width="stretch")
+
+            # Multi-Batter Over-wise Comparison
+            st.markdown("---")
+            st.markdown("#### 👥 Multi-Batter Over-wise Comparison")
+            st.caption(
+                "Compare over-by-over progression across multiple qualifying batters from the active filtered results. "
+                "Each batter is rendered as an independent series."
+            )
+
+            default_comp_list = [sel_ow_batter]
+            other_batters = [b for b in qualifying_batters if b != sel_ow_batter]
+            if other_batters:
+                default_comp_list.append(other_batters[0])
+            if len(other_batters) > 1:
+                default_comp_list.append(other_batters[1])
+
+            sel_comp_players = st.multiselect(
+                "Select Qualifying Batters to Compare:",
+                options=qualifying_batters,
+                default=default_comp_list[:3],
+                key="ms_comp_qual_batters"
+            )
+
+            if len(sel_comp_players) < 2:
+                st.info("ℹ️ Select at least 2 qualifying batters to display comparative multi-series charts.")
+            else:
+                comp_ids = {}
+                for p_nm in sel_comp_players:
+                    p_match = df_adv_bat[df_adv_bat["striker_name"] == p_nm]
+                    if not p_match.empty:
+                        comp_ids[p_nm] = int(p_match.iloc[0]["striker_id"])
+
+                df_comparison = get_multi_batter_overwise_comparison(filtered_bbb, comp_ids)
+
+                if df_comparison.empty:
+                    st.warning("No delivery data available for the selected comparison group.")
+                else:
+                    cmp_tab_runs, cmp_tab_4s, cmp_tab_6s, cmp_tab_bnd, cmp_tab_sr = st.tabs([
+                        "🏏 Runs by Over",
+                        "4️⃣ Fours by Over",
+                        "6️⃣ Sixes by Over",
+                        "🎯 Total Boundaries by Over",
+                        "⚡ Strike Rate by Over"
+                    ])
+
+                    with cmp_tab_runs:
+                        fig_cmp_r = px.line(
+                            df_comparison,
+                            x="Over",
+                            y="Runs",
+                            color="Batter",
+                            markers=True,
+                            title="Batter Comparison — Runs by Over (Overs 1 to 20)"
+                        )
+                        fig_cmp_r.update_layout(**layout_defs)
+                        fig_cmp_r.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_cmp_r, width="stretch")
+
+                    with cmp_tab_4s:
+                        fig_cmp_4 = px.line(
+                            df_comparison,
+                            x="Over",
+                            y="Fours",
+                            color="Batter",
+                            markers=True,
+                            title="Batter Comparison — Fours (4s) Hit by Over"
+                        )
+                        fig_cmp_4.update_layout(**layout_defs)
+                        fig_cmp_4.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_cmp_4, width="stretch")
+
+                    with cmp_tab_6s:
+                        fig_cmp_6 = px.line(
+                            df_comparison,
+                            x="Over",
+                            y="Sixes",
+                            color="Batter",
+                            markers=True,
+                            title="Batter Comparison — Sixes (6s) Hit by Over"
+                        )
+                        fig_cmp_6.update_layout(**layout_defs)
+                        fig_cmp_6.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_cmp_6, width="stretch")
+
+                    with cmp_tab_bnd:
+                        fig_cmp_b = px.line(
+                            df_comparison,
+                            x="Over",
+                            y="Total Boundaries",
+                            color="Batter",
+                            markers=True,
+                            title="Batter Comparison — Total Boundaries Hit by Over"
+                        )
+                        fig_cmp_b.update_layout(**layout_defs)
+                        fig_cmp_b.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_cmp_b, width="stretch")
+
+                    with cmp_tab_sr:
+                        fig_cmp_s = px.line(
+                            df_comparison[df_comparison["Balls Faced"] > 0],
+                            x="Over",
+                            y="Strike Rate",
+                            color="Batter",
+                            markers=True,
+                            title="Batter Comparison — Strike Rate Trajectory by Over"
+                        )
+                        fig_cmp_s.update_layout(**layout_defs)
+                        fig_cmp_s.update_xaxes(tickmode="linear", tick0=1, dtick=1)
+                        st.plotly_chart(fig_cmp_s, width="stretch")
+
 
 # =========================================================================
 # TAB 2: ADVANCED BOWLING ANALYSIS
