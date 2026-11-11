@@ -3,6 +3,11 @@ SHOT TYPE & DELIVERY STYLE INTELLIGENCE
 Detailed analysis of batsman shot distribution, productivity, delivery styles, and on/off side splits.
 """
 
+import sys
+from pathlib import Path
+_pkg_root = Path(__file__).resolve().parent.parent
+if str(_pkg_root) not in sys.path:
+    sys.path.insert(0, str(_pkg_root))
 import streamlit as st
 import pandas as pd
 import numpy as np

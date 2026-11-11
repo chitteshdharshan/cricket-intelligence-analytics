@@ -3,6 +3,16 @@ CRICKET INTELLIGENCE: Premium Cricket Analytics Platform
 Main Application & Home Dashboard.
 """
 
+import sys
+from pathlib import Path
+
+# Ensure cricket_intelligence and repository root are in sys.path
+_current_dir = Path(__file__).resolve().parent
+if str(_current_dir) not in sys.path:
+    sys.path.insert(0, str(_current_dir))
+if str(_current_dir.parent) not in sys.path:
+    sys.path.insert(1, str(_current_dir.parent))
+
 import streamlit as st
 import pandas as pd
 import numpy as np

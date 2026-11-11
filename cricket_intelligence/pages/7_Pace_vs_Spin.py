@@ -4,6 +4,11 @@ Dedicated comparative module analyzing batsman vulnerability, cadence, and bound
 against Fast Bowlers versus Spinners.
 """
 
+import sys
+from pathlib import Path
+_pkg_root = Path(__file__).resolve().parent.parent
+if str(_pkg_root) not in sys.path:
+    sys.path.insert(0, str(_pkg_root))
 import streamlit as st
 import pandas as pd
 import numpy as np

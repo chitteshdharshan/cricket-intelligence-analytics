@@ -4,14 +4,29 @@ Processes raw CSVs into highly optimized, pre-indexed parquet files and metadata
 """
 
 import os
+from pathlib import Path
 import pandas as pd
 import numpy as np
 
-def clean_and_process_data(raw_dir: str = "data/raw", processed_dir: str = "data/processed") -> dict:
+def clean_and_process_data(raw_dir: str = None, processed_dir: str = None) -> dict:
     """
     Cleans raw cricket datasets, performs relational integrity checks,
     computes canonical cricket metrics and exports optimized Parquet files.
     """
+    base_dir = Path(__file__).resolve().parent.parent  # cricket_intelligence
+    
+    if raw_dir is None:
+        candidates_raw = [
+            base_dir / "data" / "raw",
+            Path.cwd() / "cricket_intelligence" / "data" / "raw",
+            Path.cwd() / "data" / "raw",
+        ]
+        raw_path = next((p for p in candidates_raw if (p / "competitions.csv").is_file()), candidates_raw[0])
+        raw_dir = str(raw_path)
+        
+    if processed_dir is None:
+        processed_dir = str(base_dir / "data" / "processed")
+        
     os.makedirs(processed_dir, exist_ok=True)
     
     # 1. Load raw datasets

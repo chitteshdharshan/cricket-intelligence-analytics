@@ -3,6 +3,11 @@ Player Database & Scouting Directory
 Searchable directory of all players with career statistics, filters, and quick profile inspection.
 """
 
+import sys
+from pathlib import Path
+_pkg_root = Path(__file__).resolve().parent.parent
+if str(_pkg_root) not in sys.path:
+    sys.path.insert(0, str(_pkg_root))
 import streamlit as st
 import pandas as pd
 from src.data_loader import load_all_data, get_lookup_maps
