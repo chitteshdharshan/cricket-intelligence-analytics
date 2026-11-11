@@ -12,9 +12,17 @@ Comprehensive performance intelligence platform featuring:
 
 import sys
 from pathlib import Path
-_pkg_root = Path(__file__).resolve().parent.parent
-if str(_pkg_root) not in sys.path:
-    sys.path.insert(0, str(_pkg_root))
+
+# Robustly ensure package directory and repository root are top of sys.path
+_current_file = Path(__file__).resolve()
+_pages_dir = _current_file.parent
+_pkg_root = _pages_dir.parent          # cricket_intelligence directory
+_repo_root = _pkg_root.parent          # repository root
+
+for _p in [str(_repo_root), str(_pkg_root)]:
+    if _p in sys.path:
+        sys.path.remove(_p)
+    sys.path.insert(0, _p)
 
 import streamlit as st
 import pandas as pd
@@ -22,42 +30,80 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from src.data_loader import load_all_data
-from src.ui_components import (
-    apply_custom_theme,
-    render_banner,
-    render_sidebar_branding,
-    render_kpi,
-    render_section_header,
-    get_plotly_layout_defaults
-)
-from src.advanced_batting_engine import (
-    calculate_advanced_batting_stats,
-    get_pace_vs_spin_batter_breakdown,
-    get_pace_spin_comparative_table,
-    filter_bbb_deliveries,
-    get_batter_overwise_boundary_intelligence,
-    get_batter_over_peaks,
-    get_batter_match_innings_list,
-    get_multi_batter_overwise_comparison
-)
-from src.advanced_bowling_engine import calculate_advanced_bowling_stats
-from src.overwise_analysis_engine import (
-    get_batter_overwise_analysis,
-    get_bowler_overwise_analysis,
-    get_phase_wise_bowler_rankings,
-    get_over_specific_bowler_rankings
-)
-from src.bowling_line_length_engine import (
-    calculate_yorker_performance_stats,
-    get_bowler_delivery_style_distribution,
-    get_data_transparency_disclosure
-)
-from src.handedness_analysis_engine import (
-    get_bowler_vs_handedness_stats,
-    get_all_bowlers_handedness_rankings,
-    get_batter_vs_bowling_arm_stats
-)
+try:
+    from src.data_loader import load_all_data
+    from src.ui_components import (
+        apply_custom_theme,
+        render_banner,
+        render_sidebar_branding,
+        render_kpi,
+        render_section_header,
+        get_plotly_layout_defaults
+    )
+    from src.advanced_batting_engine import (
+        calculate_advanced_batting_stats,
+        get_pace_vs_spin_batter_breakdown,
+        get_pace_spin_comparative_table,
+        filter_bbb_deliveries,
+        get_batter_overwise_boundary_intelligence,
+        get_batter_over_peaks,
+        get_batter_match_innings_list,
+        get_multi_batter_overwise_comparison
+    )
+    from src.advanced_bowling_engine import calculate_advanced_bowling_stats
+    from src.overwise_analysis_engine import (
+        get_batter_overwise_analysis,
+        get_bowler_overwise_analysis,
+        get_phase_wise_bowler_rankings,
+        get_over_specific_bowler_rankings
+    )
+    from src.bowling_line_length_engine import (
+        calculate_yorker_performance_stats,
+        get_bowler_delivery_style_distribution,
+        get_data_transparency_disclosure
+    )
+    from src.handedness_analysis_engine import (
+        get_bowler_vs_handedness_stats,
+        get_all_bowlers_handedness_rankings,
+        get_batter_vs_bowling_arm_stats
+    )
+except (ImportError, ModuleNotFoundError):
+    from cricket_intelligence.src.data_loader import load_all_data
+    from cricket_intelligence.src.ui_components import (
+        apply_custom_theme,
+        render_banner,
+        render_sidebar_branding,
+        render_kpi,
+        render_section_header,
+        get_plotly_layout_defaults
+    )
+    from cricket_intelligence.src.advanced_batting_engine import (
+        calculate_advanced_batting_stats,
+        get_pace_vs_spin_batter_breakdown,
+        get_pace_spin_comparative_table,
+        filter_bbb_deliveries,
+        get_batter_overwise_boundary_intelligence,
+        get_batter_over_peaks,
+        get_batter_match_innings_list,
+        get_multi_batter_overwise_comparison
+    )
+    from cricket_intelligence.src.advanced_bowling_engine import calculate_advanced_bowling_stats
+    from cricket_intelligence.src.overwise_analysis_engine import (
+        get_batter_overwise_analysis,
+        get_bowler_overwise_analysis,
+        get_phase_wise_bowler_rankings,
+        get_over_specific_bowler_rankings
+    )
+    from cricket_intelligence.src.bowling_line_length_engine import (
+        calculate_yorker_performance_stats,
+        get_bowler_delivery_style_distribution,
+        get_data_transparency_disclosure
+    )
+    from cricket_intelligence.src.handedness_analysis_engine import (
+        get_bowler_vs_handedness_stats,
+        get_all_bowlers_handedness_rankings,
+        get_batter_vs_bowling_arm_stats
+    )
 
 # Page Configuration
 st.set_page_config(
