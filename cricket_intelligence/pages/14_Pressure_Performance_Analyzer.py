@@ -445,3 +445,4 @@ with tab_drill:
                     - **Clutch Wickets:** Took **{ranking_row['wickets']} wickets** and delivered **{ranking_row['dots']} dot balls** ({ranking_row['dot_pct']}% dot ball frequency).
                     - **Sample Reliability:** Evaluated across {ranking_row['opportunities']} match(es) with a confidence factor of `{ranking_row['sample_confidence']}`.
                     """)
+

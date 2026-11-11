@@ -22,3 +22,11 @@ env/
 # Streamlit secrets
 .streamlit/secrets.toml
 
+# Root-level convenience symlinks (real app lives in cricket_intelligence/)
+/app.py
+/pages
+/src
+/assets
+/data
+/outputs
+

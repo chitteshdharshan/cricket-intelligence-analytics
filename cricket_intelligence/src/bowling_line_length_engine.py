@@ -134,3 +134,4 @@ def get_data_transparency_disclosure() -> Dict[str, str]:
             "integrity principles, missing camera tracking coordinates are honestly documented rather than guessed."
         )
     }
+

@@ -247,3 +247,4 @@ def get_pace_spin_comparative_table(
         merged = merged[merged["spin_bpd"] > merged["pace_bpd"]]
 
     return merged.sort_values(by=["pace_runs", "spin_runs"], ascending=[False, False]).reset_index(drop=True)
+
