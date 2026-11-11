@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Cricket Intelligence Logo</title>
+  <path d="M34 19 43 7l5 4-9 13-5-5Z" fill="#16C784"/>
+  <path d="m11 47 23-28 9 8-23 28a6 6 0 0 1-8-8Z" fill="#F5F7FA"/>
+  <path d="m34 19 9 8-4 5-9-8 4-5Z" fill="#94A3B8"/>
+  <circle cx="47" cy="47" r="9" fill="#16C784"/>
+  <path d="M43 40c2 4 6 8 9 11m-11-8c3-2 7-3 11-2" fill="none" stroke="#080D18" stroke-linecap="round" stroke-width="1.5"/>
+</svg>
